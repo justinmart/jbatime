@@ -6,7 +6,7 @@
     <title>Game Timer</title>
     <style>
         body { text-align: center; font-family: Arial, sans-serif; }
-        .player { display: inline-block; margin: 10px; padding: 10px; border: 1px solid black; }
+        .player { display: inline-block; width: 200px; vertical-align: top; margin: 10px; padding: 10px; border: 1px solid black; }
         .current-turn { background-color: rgba(255, 255, 0, 0.5); }
     </style>
 </head>
@@ -74,8 +74,32 @@
                 document.getElementById('game-setup').style.display = 'none';
                 document.getElementById('game-display').style.display = 'block';
                 document.getElementById('game-title-display').innerText = gameTitle;
+                fetchStatus();
+                setInterval(fetchStatus, 1000);
             }
         });
+
+        async function fetchStatus() {
+            const response = await fetch('/status');
+            const data = await response.json();
+            if (data.success !== false) {
+                document.getElementById('total-elapsed-time').innerText = data.total_elapsed_time;
+                document.getElementById('total-play-time').innerText = data.total_play_time;
+                const playersDiv = document.getElementById('players');
+                playersDiv.innerHTML = '';
+                data.players.forEach((player, index) => {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.className = 'player' + (index === data.current_player ? ' current-turn' : '');
+                    playerDiv.innerHTML = `
+                        <h3>${player.name}</h3>
+                        <p>Time Bank: ${player.time_left} seconds</p>
+                        <p>Total Play Time: ${player.total_play_time}</p>
+                        <p>Time %: ${player.time_percent.toFixed(2)}%</p>
+                    `;
+                    playersDiv.appendChild(playerDiv);
+                });
+            }
+        }
     </script>
 </body>
 </html>
