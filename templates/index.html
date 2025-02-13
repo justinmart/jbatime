@@ -21,17 +21,62 @@
     </style>
 </head>
 <body>
-    <h1 id="game-title">Dune Imperium Game Night!</h1>
-    <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
-    <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
-    <h3>Turn Counter: <span id="turn-counter">0</span></h3>
-    <div id="players"></div>
+    <div id="game-setup">
+        <h1>Game Setup</h1>
+        <form id="setup-form">
+            <label for="game-title">Game Title:</label>
+            <input type="text" id="game-title" name="game-title" required><br><br>
+            <label for="num-players">Number of Players:</label>
+            <input type="number" id="num-players" name="num-players" min="1" required><br><br>
+            <label for="initial-time">Initial Time (seconds):</label>
+            <input type="number" id="initial-time" name="initial-time" min="1" required><br><br>
+            <label for="increment">Increment Time (seconds):</label>
+            <input type="number" id="increment" name="increment" min="1" required><br><br>
+            <button type="submit">Start Game</button>
+        </form>
+    </div>
+
+    <div id="game-display" style="display:none;">
+        <h1 id="game-title">Dune Imperium Game Night!</h1>
+        <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
+        <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
+        <h3>Turn Counter: <span id="turn-counter">0</span></h3>
+        <div id="players"></div>
+    </div>
+
     <script>
+        document.getElementById('setup-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const gameTitle = document.getElementById('game-title').value;
+            const numPlayers = document.getElementById('num-players').value;
+            const initialTime = document.getElementById('initial-time').value;
+            const increment = document.getElementById('increment').value;
+
+            const response = await fetch('/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    game_title: gameTitle,
+                    num_players: numPlayers,
+                    initial_time: initialTime,
+                    increment: increment
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('game-setup').style.display = 'none';
+                document.getElementById('game-display').style.display = 'block';
+                document.getElementById('game-title').innerText = gameTitle;
+                fetchStatus();
+            }
+        });
+
         async function fetchStatus() {
             const response = await fetch('/status');
             const data = await response.json();
             if (data.success !== false) {
-                document.getElementById('game-title').innerText = data.game_title;
                 document.getElementById('total-elapsed-time').innerText = formatTime(data.total_elapsed_time);
                 document.getElementById('total-play-time').innerText = formatTime(data.total_play_time);
                 document.getElementById('turn-counter').innerText = data.turn_count;
