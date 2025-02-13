@@ -35,13 +35,15 @@ class Game:
         self.turn_count = 0
 
     def next_player(self):
-        self.players[self.current_player].add_time()
-        self.current_player = (self.current_player + 1) % len(self.players)
-        self.turn_count += 1
-        self.paused = True
+        with self.lock:
+            self.players[self.current_player].add_time()
+            self.current_player = (self.current_player + 1) % len(self.players)
+            self.turn_count += 1
+            self.paused = True
 
     def pause(self):
-        self.paused = not self.paused
+        with self.lock:
+            self.paused = not self.paused
 
     def edit_time_bank(self, player_index, new_time, new_increment):
         with self.lock:
@@ -52,14 +54,13 @@ class Game:
         while True:
             time.sleep(1)
             if not self.paused:
-                start_time = time.time()
-                elapsed = time.time() - start_time
                 self.total_elapsed_time += 1
-                self.total_play_time += elapsed
-
+                self.total_play_time += 1
                 if not self.players[self.current_player].deduct_time(1):
                     additional_time = 30  # Additional time to add for demonstration
                     self.players[self.current_player].time_left += additional_time
+
+game = None
 
 @app.route('/')
 def index():
