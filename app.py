@@ -50,5 +50,74 @@ class Game:
 
     def run_game(self):
         while True:
+            time.sleep(1)
             if not self.paused:
-                start
+                start_time = time.time()
+                elapsed = time.time() - start_time
+                self.total_elapsed_time += 1
+                self.total_play_time += elapsed
+
+                if not self.players[self.current_player].deduct_time(1):
+                    additional_time = 30  # Additional time to add for demonstration
+                    self.players[self.current_player].time_left += additional_time
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/start', methods=['POST'])
+def start_game():
+    global game
+    data = request.get_json()
+    game_title = data['game_title']
+    player_names = data['player_names']
+    initial_time = int(data['initial_time'])
+    increment = int(data['increment'])
+    game = Game(player_names, initial_time, increment, game_title)
+    threading.Thread(target=game.run_game).start()
+    return jsonify(success=True)
+
+@app.route('/status', methods=['GET'])
+def get_status():
+    global game
+    if game is None:
+        return jsonify(success=False, error="Game not started")
+    return jsonify({
+        'game_title': game.game_title,
+        'total_elapsed_time': game.total_elapsed_time,
+        'total_play_time': game.total_play_time,
+        'turn_count': game.turn_count,
+        'players': [
+            {
+                'name': player.name,
+                'total_play_time': player.total_play_time,
+                'time_left': player.time_left,
+                'time_percent': (player.total_play_time / game.total_play_time) * 100 if game.total_play_time > 0 else 0
+            }
+            for player in game.players
+        ],
+        'current_player': game.current_player,
+        'paused': game.paused
+    })
+
+@app.route('/control', methods=['POST'])
+def control():
+    global game
+    data = request.get_json()
+    if game is None:
+        return jsonify(success=False, error="Game not started")
+    command = data['command']
+    if command == 'pause':
+        game.pause()
+    elif command == 'next':
+        game.next_player()
+    elif command == 'edit':
+        player_index = int(data['player_index'])
+        new_time = int(data['new_time'])
+        new_increment = int(data['new_increment'])
+        game.edit_time_bank(player_index, new_time, new_increment)
+    return jsonify(success=True)
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
