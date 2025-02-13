@@ -1,6 +1,6 @@
 import time
 import threading
-import pygame  # Ensure you have pygame installed: pip install pygame
+from playsound import playsound  # Ensure you have playsound installed: pip install playsound
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -67,11 +67,7 @@ class Game:
 
     def sound_alarm(self):
         print("Playing sound...")
-        pygame.mixer.init()
-        pygame.mixer.music.load("alarm.wav")
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy():
-            time.sleep(1)
+        playsound("alarm.wav")
 
 game = None
 
