@@ -28,6 +28,7 @@
             <input type="text" id="game-title" name="game-title" required><br><br>
             <label for="num-players">Number of Players:</label>
             <input type="number" id="num-players" name="num-players" min="1" required><br><br>
+            <div id="player-names"></div>
             <label for="initial-time">Initial Time (seconds):</label>
             <input type="number" id="initial-time" name="initial-time" min="1" required><br><br>
             <label for="increment">Increment Time (seconds):</label>
@@ -46,6 +47,8 @@
 
     <script>
         let gameStarted = false;
+        let currentTimeBank = 0;
+        let currentTimer = null;
 
         document.getElementById('setup-form').addEventListener('submit', async function(event) {
             event.preventDefault();
@@ -53,6 +56,11 @@
             const numPlayers = document.getElementById('num-players').value;
             const initialTime = document.getElementById('initial-time').value;
             const increment = document.getElementById('increment').value;
+            const playerNames = [];
+
+            document.querySelectorAll('.player-name').forEach(input => {
+                playerNames.push(input.value);
+            });
 
             const response = await fetch('/start', {
                 method: 'POST',
@@ -63,7 +71,8 @@
                     game_title: gameTitle,
                     num_players: numPlayers,
                     initial_time: initialTime,
-                    increment: increment
+                    increment: increment,
+                    player_names: playerNames
                 })
             });
             const data = await response.json();
@@ -73,6 +82,15 @@
                 document.getElementById('game-display').style.display = 'block';
                 document.getElementById('game-title').innerText = gameTitle;
                 fetchStatus();
+            }
+        });
+
+        document.getElementById('num-players').addEventListener('change', function() {
+            const numPlayers = this.value;
+            const playerNamesDiv = document.getElementById('player-names');
+            playerNamesDiv.innerHTML = '';
+            for (let i = 0; i < numPlayers; i++) {
+                playerNamesDiv.innerHTML += `<label for="player-name-${i}">Player ${i + 1} Name:</label><input type="text" class="player-name" id="player-name-${i}" name="player-name-${i}" required><br><br>`;
             }
         });
 
@@ -97,6 +115,20 @@
                     `;
                     playersDiv.appendChild(playerDiv);
                 });
+
+                if (currentTimer) clearInterval(currentTimer);
+                currentTimeBank = data.players[data.current_player].time_left;
+
+                if (data.paused === false) {
+                    currentTimer = setInterval(() => {
+                        currentTimeBank--;
+                        document.querySelector('.current-turn .player').querySelector('p:nth-child(3)').innerText = `Time Bank: ${formatTime(currentTimeBank)}`;
+                        if (currentTimeBank <= 0) {
+                            clearInterval(currentTimer);
+                            alert("Time's up!");
+                        }
+                    }, 1000);
+                }
             }
         }
 
