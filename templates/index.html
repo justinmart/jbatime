@@ -47,8 +47,11 @@
 
     <script>
         let gameStarted = false;
+        let timerRunning = false;
         let currentTimeBank = 0;
         let currentTimer = null;
+        let elapsedTime = 0;
+        let playTime = 0;
 
         document.getElementById('setup-form').addEventListener('submit', async function(event) {
             event.preventDefault();
@@ -78,6 +81,7 @@
             const data = await response.json();
             if (data.success) {
                 gameStarted = true;
+                timerRunning = false;
                 document.getElementById('game-setup').style.display = 'none';
                 document.getElementById('game-display').style.display = 'block';
                 document.getElementById('game-title').innerText = gameTitle;
@@ -98,8 +102,10 @@
             const response = await fetch('/status');
             const data = await response.json();
             if (data.success !== false) {
-                document.getElementById('total-elapsed-time').innerText = formatTime(data.total_elapsed_time);
-                document.getElementById('total-play-time').innerText = formatTime(data.total_play_time);
+                elapsedTime = data.total_elapsed_time;
+                playTime = data.total_play_time;
+                document.getElementById('total-elapsed-time').innerText = formatTime(elapsedTime);
+                document.getElementById('total-play-time').innerText = formatTime(playTime);
                 document.getElementById('turn-counter').innerText = data.turn_count;
 
                 const playersDiv = document.getElementById('players');
@@ -119,15 +125,8 @@
                 if (currentTimer) clearInterval(currentTimer);
                 currentTimeBank = data.players[data.current_player].time_left;
 
-                if (data.paused === false) {
-                    currentTimer = setInterval(() => {
-                        currentTimeBank--;
-                        document.querySelector('.current-turn .player').querySelector('p:nth-child(3)').innerText = `Time Bank: ${formatTime(currentTimeBank)}`;
-                        if (currentTimeBank <= 0) {
-                            clearInterval(currentTimer);
-                            alert("Time's up!");
-                        }
-                    }, 1000);
+                if (!data.paused) {
+                    startTimer();
                 }
             }
         }
@@ -152,10 +151,34 @@
             }
         }
 
+        function startTimer() {
+            timerRunning = true;
+            currentTimer = setInterval(() => {
+                elapsedTime++;
+                document.getElementById('total-elapsed-time').innerText = formatTime(elapsedTime);
+                if (timerRunning) {
+                    currentTimeBank--;
+                    playTime++;
+                    document.getElementById('total-play-time').innerText = formatTime(playTime);
+                    document.querySelector('.current-turn .player').querySelector('p:nth-child(3)').innerText = `Time Bank: ${formatTime(currentTimeBank)}`;
+                }
+                if (currentTimeBank <= 0) {
+                    clearInterval(currentTimer);
+                    alert("Time's up!");
+                }
+            }, 1000);
+        }
+
         document.addEventListener('keydown', (event) => {
             if (!gameStarted) return;
             if (event.key === ' ') {
-                sendControl('next');
+                if (timerRunning) {
+                    sendControl('pause');
+                    timerRunning = false;
+                } else {
+                    sendControl('next');
+                    startTimer();
+                }
             } else if (event.key === 'p') {
                 sendControl('pause');
             } else if (event.key === 'e') {
