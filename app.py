@@ -1,5 +1,4 @@
 import time
-import sys
 import threading
 import pygame  # Ensure you have pygame installed: pip install pygame
 from flask import Flask, render_template, request, jsonify
@@ -20,13 +19,13 @@ class Player:
         self.time_left -= elapsed
         self.total_play_time += elapsed
         if self.time_left < 0:
-            print("{}'s time has run out!".format(self.name))
+            print(f"{self.name}'s time has run out!")
             return False
         return True
 
 class Game:
     def __init__(self, num_players, initial_time, increment, game_title):
-        self.players = [Player("Player {}".format(i+1), initial_time, increment) for i in range(num_players)]
+        self.players = [Player(f"Player {i+1}", initial_time, increment) for i in range(num_players)]
         self.current_player = 0
         self.paused = False
         self.lock = threading.Lock()
