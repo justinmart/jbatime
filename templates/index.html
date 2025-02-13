@@ -52,8 +52,7 @@
         let currentTimeBank = 0;
         let elapsedTime = 0;
         let totalPlayTime = 0;
-        let playerTimeBank = [];
-        
+
         document.getElementById('setup-form').addEventListener('submit', async function(event) {
             event.preventDefault();
             const gameTitle = document.getElementById('game-title').value;
@@ -82,8 +81,8 @@
             const data = await response.json();
             if (data.success) {
                 gameStarted = true;
-                currentTimeBank = initialTime;
-                playerTimeBank = playerNames.map(name => initialTime);
+                elapsedTime = 0;
+                totalPlayTime = 0;
                 document.getElementById('game-setup').style.display = 'none';
                 document.getElementById('game-display').style.display = 'block';
                 document.getElementById('game-title').innerText = gameTitle;
@@ -145,7 +144,6 @@
             currentTimeBank = timeBank;
             currentPlayerTimer = setInterval(() => {
                 currentTimeBank--;
-                playerTimeBank[playerIndex]--;
                 totalPlayTime++;
                 document.getElementById('total-play-time').innerText = formatTime(totalPlayTime);
                 document.querySelector('.current-turn .player').querySelector('p:nth-child(3)').innerText = `Time Bank: ${formatTime(currentTimeBank)}`;
@@ -173,6 +171,7 @@
         document.addEventListener('keydown', (event) => {
             if (!gameStarted) return;
             if (event.key === ' ') {
+                if (currentPlayerTimer) clearInterval(currentPlayerTimer);
                 sendControl('next');
             } else if (event.key === 'p') {
                 sendControl('pause');
