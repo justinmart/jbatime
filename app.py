@@ -1,6 +1,5 @@
 import time
 import threading
-from playsound import playsound  # Ensure you have playsound installed: pip install playsound
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
@@ -56,7 +55,6 @@ class Game:
                 self.total_play_time += elapsed
 
                 if not self.players[self.current_player].deduct_time(elapsed):
-                    self.sound_alarm()
                     additional_time = 30  # Additional time to add for demonstration
                     self.players[self.current_player].time_left += additional_time
 
@@ -64,10 +62,6 @@ class Game:
 
             self.total_elapsed_time += 1
             time.sleep(1)
-
-    def sound_alarm(self):
-        print("Playing sound...")
-        playsound("alarm.wav")
 
 game = None
 
