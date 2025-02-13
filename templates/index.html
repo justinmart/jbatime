@@ -11,39 +11,71 @@
     </style>
 </head>
 <body>
-    <h1 id="game-title">Game Timer</h1>
-    <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
-    <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
-    <div id="players"></div>
+    <div id="game-setup">
+        <h1>Game Setup</h1>
+        <form id="setup-form">
+            <label for="game-title">Game Title:</label>
+            <input type="text" id="game-title" name="game-title" required><br><br>
+            <label for="num-players">Number of Players:</label>
+            <input type="number" id="num-players" name="num-players" min="1" required><br><br>
+            <div id="player-names"></div>
+            <label for="initial-time">Initial Time (seconds):</label>
+            <input type="number" id="initial-time" name="initial-time" min="1" required><br><br>
+            <label for="increment">Increment Time (seconds):</label>
+            <input type="number" id="increment" name="increment" min="1" required><br><br>
+            <button type="submit">Start Game</button>
+        </form>
+    </div>
+
+    <div id="game-display" style="display:none;">
+        <h1 id="game-title-display">Game Timer</h1>
+        <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
+        <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
+        <div id="players"></div>
+    </div>
 
     <script>
-        async function fetchStatus() {
-            const response = await fetch('/status');
-            const data = await response.json();
-            if (data.success !== false) {
-                document.getElementById('total-elapsed-time').innerText = data.total_elapsed_time;
-                document.getElementById('total-play-time').innerText = data.total_play_time;
-
-                const playersDiv = document.getElementById('players');
-                playersDiv.innerHTML = '';
-                data.players.forEach((player, index) => {
-                    const playerDiv = document.createElement('div');
-                    playerDiv.className = 'player' + (index === data.current_player ? ' current-turn' : '');
-                    playerDiv.innerHTML = `
-                        <h4>${player.name}</h4>
-                        <p>Total Play Time: ${player.total_play_time}</p>
-                        <p>Time Bank: ${player.time_left} seconds</p>`;
-                    playersDiv.appendChild(playerDiv);
-                });
+        document.getElementById('num-players').addEventListener('change', function() {
+            const numPlayers = this.value;
+            const playerNamesDiv = document.getElementById('player-names');
+            playerNamesDiv.innerHTML = '';
+            for (let i = 0; i < numPlayers; i++) {
+                playerNamesDiv.innerHTML += `<label for="player-name-${i}">Player ${i + 1} Name:</label><input type="text" class="player-name" id="player-name-${i}" name="player-name-${i}" required><br><br>`;
             }
-        }
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === ' ') fetch('/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({command: 'next'})});
-            else if (event.key === 'p') fetch('/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({command: 'pause'})});
         });
 
-        setInterval(fetchStatus, 1000);
+        document.getElementById('setup-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const gameTitle = document.getElementById('game-title').value;
+            const numPlayers = document.getElementById('num-players').value;
+            const initialTime = document.getElementById('initial-time').value;
+            const increment = document.getElementById('increment').value;
+            const playerNames = [];
+
+            document.querySelectorAll('.player-name').forEach(input => {
+                playerNames.push(input.value);
+            });
+
+            const response = await fetch('/start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    game_title: gameTitle,
+                    num_players: numPlayers,
+                    initial_time: initialTime,
+                    increment: increment,
+                    player_names: playerNames
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                document.getElementById('game-setup').style.display = 'none';
+                document.getElementById('game-display').style.display = 'block';
+                document.getElementById('game-title-display').innerText = gameTitle;
+            }
+        });
     </script>
 </body>
 </html>
