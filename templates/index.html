@@ -5,115 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Timer</title>
     <style>
-        body {
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }
-        .player {
-            display: inline-block;
-            margin: 10px;
-            padding: 10px;
-            border: 1px solid black;
-        }
-        .current-turn {
-            background-color: rgba(255, 255, 0, 0.5);
-        }
+        body { text-align: center; font-family: Arial, sans-serif; }
+        .player { display: inline-block; margin: 10px; padding: 10px; border: 1px solid black; }
+        .current-turn { background-color: rgba(255, 255, 0, 0.5); }
     </style>
 </head>
 <body>
-    <div id="game-setup">
-        <h1>Game Setup</h1>
-        <form id="setup-form">
-            <label for="game-title">Game Title:</label>
-            <input type="text" id="game-title" name="game-title" required><br><br>
-            <label for="num-players">Number of Players:</label>
-            <input type="number" id="num-players" name="num-players" min="1" required><br><br>
-            <div id="player-names"></div>
-            <label for="initial-time">Initial Time (seconds):</label>
-            <input type="number" id="initial-time" name="initial-time" min="1" required><br><br>
-            <label for="increment">Increment Time (seconds):</label>
-            <input type="number" id="increment" name="increment" min="1" required><br><br>
-            <button type="submit">Start Game</button>
-        </form>
-    </div>
-
-    <div id="game-display" style="display:none;">
-        <h1 id="game-title">Dune Imperium Game Night!</h1>
-        <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
-        <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
-        <h3>Turn Counter: <span id="turn-counter">0</span></h3>
-        <div id="players"></div>
-    </div>
+    <h1 id="game-title">Game Timer</h1>
+    <h2>Total Elapsed Time: <span id="total-elapsed-time">0:00</span></h2>
+    <h2>Total Play Time: <span id="total-play-time">0:00</span></h2>
+    <div id="players"></div>
 
     <script>
-        let gameStarted = false;
-        let currentPlayerTimer = null;
-        let elapsedTimeTimer = null;
-        let currentTimeBank = 0;
-        let elapsedTime = 0;
-        let totalPlayTime = 0;
-
-        document.getElementById('setup-form').addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const gameTitle = document.getElementById('game-title').value;
-            const numPlayers = document.getElementById('num-players').value;
-            const initialTime = document.getElementById('initial-time').value;
-            const increment = document.getElementById('increment').value;
-            const playerNames = [];
-
-            document.querySelectorAll('.player-name').forEach(input => {
-                playerNames.push(input.value);
-            });
-
-            const response = await fetch('/start', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    game_title: gameTitle,
-                    num_players: numPlayers,
-                    initial_time: initialTime,
-                    increment: increment,
-                    player_names: playerNames
-                })
-            });
-            const data = await response.json();
-            if (data.success) {
-                gameStarted = true;
-                elapsedTime = 0;
-                totalPlayTime = 0;
-                document.getElementById('game-setup').style.display = 'none';
-                document.getElementById('game-display').style.display = 'block';
-                document.getElementById('game-title').innerText = gameTitle;
-                startElapsedTimeTimer();
-                fetchStatus();
-            }
-        });
-
-        document.getElementById('num-players').addEventListener('change', function() {
-            const numPlayers = this.value;
-            const playerNamesDiv = document.getElementById('player-names');
-            playerNamesDiv.innerHTML = '';
-            for (let i = 0; i < numPlayers; i++) {
-                playerNamesDiv.innerHTML += `<label for="player-name-${i}">Player ${i + 1} Name:</label><input type="text" class="player-name" id="player-name-${i}" name="player-name-${i}" required><br><br>`;
-            }
-        });
-
-        function startElapsedTimeTimer() {
-            elapsedTimeTimer = setInterval(() => {
-                elapsedTime++;
-                document.getElementById('total-elapsed-time').innerText = formatTime(elapsedTime);
-            }, 1000);
-        }
-
         async function fetchStatus() {
             const response = await fetch('/status');
             const data = await response.json();
             if (data.success !== false) {
-                totalPlayTime = data.total_play_time;
-                document.getElementById('total-play-time').innerText = formatTime(totalPlayTime);
-                document.getElementById('turn-counter').innerText = data.turn_count;
+                document.getElementById('total-elapsed-time').innerText = data.total_elapsed_time;
+                document.getElementById('total-play-time').innerText = data.total_play_time;
 
                 const playersDiv = document.getElementById('players');
                 playersDiv.innerHTML = '';
@@ -122,65 +31,16 @@
                     playerDiv.className = 'player' + (index === data.current_player ? ' current-turn' : '');
                     playerDiv.innerHTML = `
                         <h4>${player.name}</h4>
-                        <p>Total Play Time: ${formatTime(player.total_play_time)}</p>
-                        <p>Time Bank: ${formatTime(player.time_left)}</p>
-                        <p>Time %: ${player.time_percent.toFixed(2)}%</p>
-                    `;
+                        <p>Total Play Time: ${player.total_play_time}</p>
+                        <p>Time Bank: ${player.time_left} seconds</p>`;
                     playersDiv.appendChild(playerDiv);
                 });
-
-                if (currentPlayerTimer) clearInterval(currentPlayerTimer);
-                if (!data.paused) startPlayerTimer(data.current_player, data.players[data.current_player].time_left);
-            }
-        }
-
-        function formatTime(seconds) {
-            const min = Math.floor(seconds / 60);
-            const sec = seconds % 60;
-            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
-        }
-
-        function startPlayerTimer(playerIndex, timeBank) {
-            currentTimeBank = timeBank;
-            currentPlayerTimer = setInterval(() => {
-                currentTimeBank--;
-                totalPlayTime++;
-                document.getElementById('total-play-time').innerText = formatTime(totalPlayTime);
-                document.querySelector('.current-turn .player').querySelector('p:nth-child(3)').innerText = `Time Bank: ${formatTime(currentTimeBank)}`;
-                if (currentTimeBank <= 0) {
-                    clearInterval(currentPlayerTimer);
-                    alert("Time's up!");
-                }
-            }, 1000);
-        }
-
-        async function sendControl(command, player_index=null, new_time=null, new_increment=null) {
-            const response = await fetch('/control', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({command, player_index, new_time, new_increment})
-            });
-            const data = await response.json();
-            if (data.success !== false) {
-                fetchStatus();
             }
         }
 
         document.addEventListener('keydown', (event) => {
-            if (!gameStarted) return;
-            if (event.key === ' ') {
-                if (currentPlayerTimer) clearInterval(currentPlayerTimer);
-                sendControl('next');
-            } else if (event.key === 'p') {
-                sendControl('pause');
-            } else if (event.key === 'e') {
-                const player_index = prompt("Enter the player number to edit (1-2):") - 1;
-                const new_time = parseInt(prompt(`Enter new time for Player ${player_index + 1}:`));
-                const new_increment = parseInt(prompt(`Enter new increment for Player ${player_index + 1}:`));
-                sendControl('edit', player_index, new_time, new_increment);
-            }
+            if (event.key === ' ') fetch('/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({command: 'next'})});
+            else if (event.key === 'p') fetch('/control', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({command: 'pause'})});
         });
 
         setInterval(fetchStatus, 1000);
