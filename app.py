@@ -33,17 +33,23 @@ class Game:
         self.total_elapsed_time = 0
         self.total_play_time = 0
         self.turn_count = 0
+        self.game_running = False
+        self.start_time = None
+        self.current_turn_start = None
 
     def next_player(self):
         with self.lock:
             self.players[self.current_player].add_time()
             self.current_player = (self.current_player + 1) % len(self.players)
             self.turn_count += 1
+            self.current_turn_start = time.time()
             self.paused = True
 
     def pause(self):
         with self.lock:
             self.paused = not self.paused
+            if not self.paused:
+                self.current_turn_start = time.time()
 
     def edit_time_bank(self, player_index, new_time, new_increment):
         with self.lock:
@@ -51,14 +57,18 @@ class Game:
             self.players[player_index].increment = new_increment
 
     def run_game(self):
+        self.start_time = time.time()
         while True:
             time.sleep(1)
-            if not self.paused:
-                self.total_elapsed_time += 1
-                self.total_play_time += 1
-                if not self.players[self.current_player].deduct_time(1):
-                    additional_time = 30  # Additional time to add for demonstration
-                    self.players[self.current_player].time_left += additional_time
+            with self.lock:
+                self.total_elapsed_time = time.time() - self.start_time
+                if not self.paused:
+                    elapsed = time.time() - self.current_turn_start
+                    self.total_play_time += elapsed
+                    self.current_turn_start = time.time()
+                    if not self.players[self.current_player].deduct_time(elapsed):
+                        additional_time = 30  # Additional time to add for demonstration
+                        self.players[self.current_player].time_left += additional_time
 
 game = None
 
@@ -75,7 +85,9 @@ def start_game():
     initial_time = int(data['initial_time'])
     increment = int(data['increment'])
     game = Game(player_names, initial_time, increment, game_title)
-    threading.Thread(target=game.run_game).start()
+    game_thread = threading.Thread(target=game.run_game)
+    game_thread.daemon = True
+    game_thread.start()
     return jsonify(success=True)
 
 @app.route('/status', methods=['GET'])
